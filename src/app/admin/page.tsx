@@ -11,6 +11,7 @@ import {
 import { money } from "@/lib/business";
 import { ExportMenu } from "@/components/ExportMenu";
 import { ImportBookings } from "@/components/ImportBookings";
+import { ScanImport } from "@/components/ScanImport";
 import type { Booking, JobCard, Invoice, BookingStatus } from "@/lib/types";
 
 type Tab = "bookings" | "jobcards" | "invoices";
@@ -80,6 +81,7 @@ function Dashboard() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {tab === "bookings" && <ScanImport onImported={reload} />}
           {tab === "bookings" && <ImportBookings onImported={reload} />}
           <ExportMenu bookings={bookings} jobCards={jobCards} invoices={invoices} />
           {tab === "invoices" ? (
