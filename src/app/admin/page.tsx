@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import {
   listBookings, listJobCards, listInvoices,
   createJobCardFromBooking, createBlankJobCard, createBlankInvoice, updateBooking, invoiceTotals,
+  deleteBooking, deleteJobCard, deleteInvoice,
 } from "@/lib/data";
 import { money } from "@/lib/business";
 import { ExportMenu } from "@/components/ExportMenu";
@@ -60,6 +61,11 @@ function Dashboard() {
   async function newInvoice() {
     const id = await createBlankInvoice();
     router.push(`/admin/invoices/${id}`);
+  }
+
+  async function del(fn: () => Promise<void>) {
+    setBusyId("del");
+    try { await fn(); await reload(); } finally { setBusyId(""); }
   }
 
   return (
@@ -118,9 +124,12 @@ function Dashboard() {
                     </select>
                   </Td>
                   <Td className="text-right">
-                    <button className="btn-ghost px-3 py-1.5 text-xs" disabled={busyId === b.id} onClick={() => openJobCard(b)}>
-                      {b.jobCardId ? "Open job card" : busyId === b.id ? "Creating…" : "Create job card"}
-                    </button>
+                    <div className="flex items-center justify-end gap-1">
+                      <button className="btn-ghost px-3 py-1.5 text-xs" disabled={busyId === b.id} onClick={() => openJobCard(b)}>
+                        {b.jobCardId ? "Open job card" : busyId === b.id ? "Creating…" : "Create job card"}
+                      </button>
+                      <TrashButton onConfirm={() => del(() => deleteBooking(b.id))} />
+                    </div>
                   </Td>
                 </tr>
               ))}
@@ -140,7 +149,10 @@ function Dashboard() {
                     ? <span className="chip bg-emerald-100 text-emerald-700">Invoiced</span>
                     : <span className="chip bg-steel-100 text-steel-500">Not yet</span>}</Td>
                   <Td className="text-right">
-                    <Link className="btn-ghost px-3 py-1.5 text-xs" href={`/admin/jobcards/${j.id}`}>Open</Link>
+                    <div className="flex items-center justify-end gap-1">
+                      <Link className="btn-ghost px-3 py-1.5 text-xs" href={`/admin/jobcards/${j.id}`}>Open</Link>
+                      <TrashButton onConfirm={() => del(() => deleteJobCard(j))} />
+                    </div>
                   </Td>
                 </tr>
               ))}
@@ -157,7 +169,10 @@ function Dashboard() {
                   <Td className="font-medium text-steel-900">{inv.customer || "—"}</Td>
                   <Td className="font-semibold">{money(invoiceTotals(inv).total)}</Td>
                   <Td className="text-right">
-                    <Link className="btn-ghost px-3 py-1.5 text-xs" href={`/admin/invoices/${inv.id}`}>Open</Link>
+                    <div className="flex items-center justify-end gap-1">
+                      <Link className="btn-ghost px-3 py-1.5 text-xs" href={`/admin/invoices/${inv.id}`}>Open</Link>
+                      <TrashButton onConfirm={() => del(() => deleteInvoice(inv))} />
+                    </div>
                   </Td>
                 </tr>
               ))}
@@ -166,6 +181,32 @@ function Dashboard() {
         </div>
       )}
     </div>
+  );
+}
+
+function TrashButton({ onConfirm }: { onConfirm: () => void }) {
+  const [armed, setArmed] = useState(false);
+  useEffect(() => {
+    if (!armed) return;
+    const t = setTimeout(() => setArmed(false), 8000);
+    return () => clearTimeout(t);
+  }, [armed]);
+
+  if (armed) {
+    return (
+      <span className="inline-flex items-center gap-1">
+        <button onClick={() => { setArmed(false); onConfirm(); }}
+          className="rounded-lg bg-brand px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-brand-dark">Delete?</button>
+        <button onClick={() => setArmed(false)}
+          className="rounded-lg border border-steel-200 bg-white px-2.5 py-1.5 text-xs text-steel-500 hover:bg-steel-50">Cancel</button>
+      </span>
+    );
+  }
+  return (
+    <button onClick={() => setArmed(true)} title="Delete"
+      className="rounded-lg border border-steel-200 bg-white p-1.5 text-steel-400 transition hover:border-brand/40 hover:bg-brand/5 hover:text-brand">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 5v6m4-6v6" /></svg>
+    </button>
   );
 }
 

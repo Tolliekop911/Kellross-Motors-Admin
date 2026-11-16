@@ -55,6 +55,9 @@ export function getBooking(id: string) {
 export async function updateBooking(id: string, patch: Partial<Booking>) {
   await update(ref(rtdb(), `bookings/${id}`), patch);
 }
+export async function deleteBooking(id: string) {
+  await remove(ref(rtdb(), `bookings/${id}`));
+}
 
 // --- Job cards ---
 export async function createJobCardFromBooking(booking: Booking): Promise<string> {
@@ -136,8 +139,12 @@ export async function getJobCard(id: string) {
 export async function saveJobCard(id: string, patch: Partial<JobCard>) {
   await update(ref(rtdb(), `jobCards/${id}`), { ...patch, updatedAt: Date.now() });
 }
-export async function deleteJobCard(id: string) {
-  await remove(ref(rtdb(), `jobCards/${id}`));
+export async function deleteJobCard(jc: JobCard) {
+  await remove(ref(rtdb(), `jobCards/${jc.id}`));
+  // Free the booking so it can be turned into a job card again.
+  if (jc.bookingId) await update(ref(rtdb(), `bookings/${jc.bookingId}`), { jobCardId: null, status: "new" });
+  // Detach any invoice created from it (the invoice itself is kept).
+  if (jc.invoiceId) await update(ref(rtdb(), `invoices/${jc.invoiceId}`), { jobCardId: null });
 }
 
 // --- Invoices ---
@@ -204,6 +211,11 @@ export async function getInvoice(id: string) {
 }
 export async function saveInvoice(id: string, patch: Partial<Invoice>) {
   await update(ref(rtdb(), `invoices/${id}`), { ...patch, updatedAt: Date.now() });
+}
+export async function deleteInvoice(inv: Invoice) {
+  await remove(ref(rtdb(), `invoices/${inv.id}`));
+  // Mark the originating job card as no longer invoiced.
+  if (inv.jobCardId) await update(ref(rtdb(), `jobCards/${inv.jobCardId}`), { invoiceId: null });
 }
 
 // --- Totals helper ---
