@@ -1,18 +1,15 @@
 import {
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  setDoc,
-  updateDoc,
-  addDoc,
-  deleteDoc,
+  ref,
+  push,
+  set,
+  update,
+  get,
+  remove,
   query,
-  orderBy,
+  orderByChild,
   runTransaction,
-  serverTimestamp,
-} from "firebase/firestore";
-import { db } from "./firebase";
+} from "firebase/database";
+import { rtdb } from "./firebase";
 import { BUSINESS } from "./business";
 import type { Booking, JobCard, Invoice } from "./types";
 
@@ -20,41 +17,43 @@ import type { Booking, JobCard, Invoice } from "./types";
 type CounterKey = "jobCardNo" | "invoiceNo";
 
 async function nextNumber(key: CounterKey): Promise<number> {
-  const ref = doc(db(), "counters", "sequences");
-  return runTransaction(db(), async (tx) => {
-    const snap = await tx.get(ref);
-    const start = key === "jobCardNo" ? BUSINESS.startingJobCardNo : BUSINESS.startingInvoiceNo;
-    const current = snap.exists() ? (snap.data()[key] as number | undefined) : undefined;
-    const next = current == null ? start : current + 1;
-    tx.set(ref, { [key]: next }, { merge: true });
-    return next;
+  const start = key === "jobCardNo" ? BUSINESS.startingJobCardNo : BUSINESS.startingInvoiceNo;
+  const res = await runTransaction(ref(rtdb(), `counters/${key}`), (current: number | null) =>
+    current == null ? start : current + 1
+  );
+  return res.snapshot.val() as number;
+}
+
+// Read a list node ordered by createdAt (newest first).
+async function listOrdered<T>(path: string): Promise<(T & { id: string })[]> {
+  const snap = await get(query(ref(rtdb(), path), orderByChild("createdAt")));
+  const rows: (T & { id: string })[] = [];
+  snap.forEach((child) => {
+    rows.push({ id: child.key as string, ...(child.val() as T) });
   });
+  return rows.reverse();
+}
+
+async function getOne<T>(path: string, id: string): Promise<(T & { id: string }) | null> {
+  const snap = await get(ref(rtdb(), `${path}/${id}`));
+  return snap.exists() ? ({ id, ...(snap.val() as T) }) : null;
 }
 
 // --- Bookings ---
 export async function createBooking(data: Omit<Booking, "id" | "createdAt" | "status">) {
-  const ref = await addDoc(collection(db(), "bookings"), {
-    ...data,
-    status: "new",
-    createdAt: Date.now(),
-    createdAtServer: serverTimestamp(),
-  });
-  return ref.id;
+  const r = push(ref(rtdb(), "bookings"));
+  await set(r, { ...data, status: "new", createdAt: Date.now() });
+  return r.key as string;
 }
 
-export async function listBookings(): Promise<Booking[]> {
-  const q = query(collection(db(), "bookings"), orderBy("createdAt", "desc"));
-  const snap = await getDocs(q);
-  return snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Booking, "id">) }));
+export function listBookings() {
+  return listOrdered<Omit<Booking, "id">>("bookings");
 }
-
-export async function getBooking(id: string): Promise<Booking | null> {
-  const snap = await getDoc(doc(db(), "bookings", id));
-  return snap.exists() ? ({ id: snap.id, ...(snap.data() as Omit<Booking, "id">) }) : null;
+export function getBooking(id: string) {
+  return getOne<Omit<Booking, "id">>("bookings", id);
 }
-
 export async function updateBooking(id: string, patch: Partial<Booking>) {
-  await updateDoc(doc(db(), "bookings", id), patch);
+  await update(ref(rtdb(), `bookings/${id}`), patch);
 }
 
 // --- Job cards ---
@@ -96,9 +95,10 @@ export async function createJobCardFromBooking(booking: Booking): Promise<string
     vacuumed: false,
     bookStamped: "",
   };
-  const ref = await addDoc(collection(db(), "jobCards"), jc);
-  await updateBooking(booking.id, { jobCardId: ref.id, status: "scheduled" });
-  return ref.id;
+  const r = push(ref(rtdb(), "jobCards"));
+  await set(r, jc);
+  await updateBooking(booking.id, { jobCardId: r.key as string, status: "scheduled" });
+  return r.key as string;
 }
 
 export async function createBlankJobCard(): Promise<string> {
@@ -115,27 +115,29 @@ export async function createBlankJobCard(): Promise<string> {
     damageCodes: [], oldParts: "", parts: [], labour: "", defectsReport: "",
     hours: "", techSign: "", testDrive: "", washed: false, vacuumed: false, bookStamped: "",
   };
-  const ref = await addDoc(collection(db(), "jobCards"), jc);
-  return ref.id;
+  const r = push(ref(rtdb(), "jobCards"));
+  await set(r, jc);
+  return r.key as string;
 }
 
-export async function listJobCards(): Promise<JobCard[]> {
-  const q = query(collection(db(), "jobCards"), orderBy("createdAt", "desc"));
-  const snap = await getDocs(q);
-  return snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<JobCard, "id">) }));
+// Realtime Database omits empty arrays, so re-hydrate them on read.
+function fixJobCard<T extends Partial<JobCard>>(jc: T): T {
+  return { ...jc, parts: jc.parts ?? [], damageCodes: jc.damageCodes ?? [] };
 }
 
-export async function getJobCard(id: string): Promise<JobCard | null> {
-  const snap = await getDoc(doc(db(), "jobCards", id));
-  return snap.exists() ? ({ id: snap.id, ...(snap.data() as Omit<JobCard, "id">) }) : null;
+export async function listJobCards() {
+  const rows = await listOrdered<Omit<JobCard, "id">>("jobCards");
+  return rows.map(fixJobCard);
 }
-
+export async function getJobCard(id: string) {
+  const jc = await getOne<Omit<JobCard, "id">>("jobCards", id);
+  return jc ? fixJobCard(jc) : null;
+}
 export async function saveJobCard(id: string, patch: Partial<JobCard>) {
-  await updateDoc(doc(db(), "jobCards", id), { ...patch, updatedAt: Date.now() });
+  await update(ref(rtdb(), `jobCards/${id}`), { ...patch, updatedAt: Date.now() });
 }
-
 export async function deleteJobCard(id: string) {
-  await deleteDoc(doc(db(), "jobCards", id));
+  await remove(ref(rtdb(), `jobCards/${id}`));
 }
 
 // --- Invoices ---
@@ -164,24 +166,26 @@ export async function createInvoiceFromJobCard(jc: JobCard): Promise<string> {
     ],
     vatIncluded: true,
   };
-  const ref = await addDoc(collection(db(), "invoices"), inv);
-  await saveJobCard(jc.id, { invoiceId: ref.id });
-  return ref.id;
+  const r = push(ref(rtdb(), "invoices"));
+  await set(r, inv);
+  await saveJobCard(jc.id, { invoiceId: r.key as string });
+  return r.key as string;
 }
 
-export async function listInvoices(): Promise<Invoice[]> {
-  const q = query(collection(db(), "invoices"), orderBy("createdAt", "desc"));
-  const snap = await getDocs(q);
-  return snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Invoice, "id">) }));
+function fixInvoice<T extends Partial<Invoice>>(inv: T): T {
+  return { ...inv, lines: inv.lines ?? [] };
 }
 
-export async function getInvoice(id: string): Promise<Invoice | null> {
-  const snap = await getDoc(doc(db(), "invoices", id));
-  return snap.exists() ? ({ id: snap.id, ...(snap.data() as Omit<Invoice, "id">) }) : null;
+export async function listInvoices() {
+  const rows = await listOrdered<Omit<Invoice, "id">>("invoices");
+  return rows.map(fixInvoice);
 }
-
+export async function getInvoice(id: string) {
+  const inv = await getOne<Omit<Invoice, "id">>("invoices", id);
+  return inv ? fixInvoice(inv) : null;
+}
 export async function saveInvoice(id: string, patch: Partial<Invoice>) {
-  await updateDoc(doc(db(), "invoices", id), { ...patch, updatedAt: Date.now() });
+  await update(ref(rtdb(), `invoices/${id}`), { ...patch, updatedAt: Date.now() });
 }
 
 // --- Totals helper ---

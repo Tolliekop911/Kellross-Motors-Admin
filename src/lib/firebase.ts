@@ -1,38 +1,32 @@
 import { initializeApp, getApps, getApp, type FirebaseApp } from "firebase/app";
-import { getFirestore, type Firestore } from "firebase/firestore";
-import { getAuth, type Auth } from "firebase/auth";
+import { getDatabase, type Database } from "firebase/database";
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL,
   projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
   storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
   messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-export const firebaseReady = Boolean(firebaseConfig.apiKey && firebaseConfig.projectId);
+export const firebaseReady = Boolean(firebaseConfig.apiKey && firebaseConfig.databaseURL);
 
 let app: FirebaseApp | undefined;
-let dbInstance: Firestore | undefined;
-let authInstance: Auth | undefined;
+let dbInstance: Database | undefined;
 
 function getFirebaseApp(): FirebaseApp {
   if (!firebaseReady) {
     throw new Error(
-      "Firebase is not configured. Copy .env.local.example to .env.local and add your Firebase web config."
+      "Firebase is not configured. Copy .env.local.example to .env.local and add your Firebase web config (including the Realtime Database URL)."
     );
   }
   if (!app) app = getApps().length ? getApp() : initializeApp(firebaseConfig);
   return app;
 }
 
-export function db(): Firestore {
-  if (!dbInstance) dbInstance = getFirestore(getFirebaseApp());
+export function rtdb(): Database {
+  if (!dbInstance) dbInstance = getDatabase(getFirebaseApp());
   return dbInstance;
-}
-
-export function auth(): Auth {
-  if (!authInstance) authInstance = getAuth(getFirebaseApp());
-  return authInstance;
 }

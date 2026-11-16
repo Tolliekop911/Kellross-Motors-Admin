@@ -1,0 +1,9 @@
+{
+  "rules": {
+    "comment": "This app has no staff login, so the admin area is open and these rules allow read/write without auth. Anyone who knows the project URL can read/write — keep the /admin URL private. To lock it down later, add Firebase Auth and change the values below to 'auth != null'.",
+    "bookings": { ".read": true, ".write": true, ".indexOn": ["createdAt"] },
+    "jobCards": { ".read": true, ".write": true, ".indexOn": ["createdAt"] },
+    "invoices": { ".read": true, ".write": true, ".indexOn": ["createdAt"] },
+    "counters": { ".read": true, ".write": true }
+  }
+}
