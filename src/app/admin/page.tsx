@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   listBookings, listJobCards, listInvoices,
-  createJobCardFromBooking, createBlankJobCard, updateBooking, invoiceTotals,
+  createJobCardFromBooking, createBlankJobCard, createBlankInvoice, updateBooking, invoiceTotals,
 } from "@/lib/data";
 import { money } from "@/lib/business";
 import type { Booking, JobCard, Invoice, BookingStatus } from "@/lib/types";
@@ -56,6 +56,11 @@ function Dashboard() {
     router.push(`/admin/jobcards/${id}`);
   }
 
+  async function newInvoice() {
+    const id = await createBlankInvoice();
+    router.push(`/admin/invoices/${id}`);
+  }
+
   return (
     <div>
       <div className="flex flex-wrap items-end justify-between gap-4">
@@ -66,7 +71,11 @@ function Dashboard() {
             {counts.openJobs} open job card{counts.openJobs === 1 ? "" : "s"}
           </p>
         </div>
-        <button className="btn-primary" onClick={newBlank}>+ New job card</button>
+        {tab === "invoices" ? (
+          <button className="btn-primary" onClick={newInvoice}>+ New invoice</button>
+        ) : (
+          <button className="btn-primary" onClick={newBlank}>+ New job card</button>
+        )}
       </div>
 
       <div className="mt-6 flex gap-1 rounded-xl border border-steel-200 bg-white p-1 text-sm">

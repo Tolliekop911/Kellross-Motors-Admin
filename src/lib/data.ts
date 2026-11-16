@@ -172,6 +172,24 @@ export async function createInvoiceFromJobCard(jc: JobCard): Promise<string> {
   return r.key as string;
 }
 
+export async function createBlankInvoice(): Promise<string> {
+  const invoiceNo = await nextNumber("invoiceNo");
+  const now = Date.now();
+  const inv: Omit<Invoice, "id"> = {
+    invoiceNo,
+    createdAt: now,
+    updatedAt: now,
+    customer: "", postalAddress: "", telephone: "", fax: "", vehicleDetail: "",
+    date: new Date().toISOString().slice(0, 10),
+    customerOrderNo: "", serviceCallNo: "", contact: "",
+    lines: [{ quantity: "1", item: "", each: 0 }],
+    vatIncluded: true,
+  };
+  const r = push(ref(rtdb(), "invoices"));
+  await set(r, inv);
+  return r.key as string;
+}
+
 function fixInvoice<T extends Partial<Invoice>>(inv: T): T {
   return { ...inv, lines: inv.lines ?? [] };
 }
