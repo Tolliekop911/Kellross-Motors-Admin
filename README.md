@@ -3,7 +3,7 @@
 Booking → Job Card → Invoice system for **KellRoss Motors CC**, Strand.
 
 - **Public booking form** (`/`) — customers book their vehicle in; each booking lands in the database.
-- **Staff admin** (`/admin`, login required) — see bookings, open a **job card** (auto-numbered, continuing from **24145**), fill in everything done, then generate a matching **tax invoice** (auto-numbered from **23230**, 15% VAT).
+- **Staff admin** (`/admin`, no login) — see bookings, open a **job card** (auto-numbered, continuing from **24145**), fill in everything done, then generate a matching **tax invoice** (auto-numbered from **23230**, 15% VAT).
 - **Download PDF** of any job card or invoice — ready to email the customer. Everything is saved in Firestore.
 
 Built with Next.js (App Router) · TypeScript · Tailwind · Firebase (Firestore + Auth) · @react-pdf/renderer.
@@ -14,9 +14,9 @@ Built with Next.js (App Router) · TypeScript · Tailwind · Firebase (Firestore
 
 1. Go to <https://console.firebase.google.com> → **Add project** (e.g. `kellross-motors`).
 2. **Build → Firestore Database → Create database** (Production mode, region `europe-west` is fine).
-3. **Build → Authentication → Get started → Email/Password → Enable.**
-4. **Authentication → Users → Add user** — create the staff login (email + password). This is what you'll sign in with at `/admin`.
-5. **Project settings (gear) → Your apps → Web (`</>`)** → register an app → copy the `firebaseConfig` values.
+3. **Project settings (gear) → Your apps → Web (`</>`)** → register an app → copy the `firebaseConfig` values.
+
+> No login: the `/admin` area is open to anyone with the URL. Keep that link private. (To add a password later, enable Firebase Email/Password auth and tighten `firestore.rules`.)
 
 ## 2. Connect the app
 
@@ -38,7 +38,6 @@ NEXT_PUBLIC_FIREBASE_APP_ID=...
 ## 3. Set the database security rules
 
 In **Firestore → Rules**, paste the contents of [`firestore.rules`](firestore.rules) and **Publish**.
-(The public can only *create* bookings; reading and all job-card/invoice access requires a signed-in staff user.)
 
 ## 4. Run it
 
@@ -48,7 +47,7 @@ npm run dev
 ```
 
 - Booking form: <http://localhost:3000>
-- Staff admin: <http://localhost:3000/admin> (sign in with the user from step 1.4)
+- Staff admin: <http://localhost:3000/admin>
 
 ## 5. Deploy (Vercel)
 

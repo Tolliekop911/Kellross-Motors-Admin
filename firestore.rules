@@ -2,15 +2,15 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Public website may CREATE a booking, but not read/edit the book.
-    match /bookings/{id} {
-      allow create: if true;
-      allow read, update, delete: if request.auth != null;
-    }
+    // NOTE: This app has no staff login — the admin area is open.
+    // These rules therefore allow the app to read/write without auth.
+    // Anyone who knows the project URL can read/write, so keep the /admin
+    // URL private. If you ever want to lock it down, add Firebase Auth and
+    // change these to `if request.auth != null`.
 
-    // Everything else is staff-only (must be signed in).
-    match /jobCards/{id}   { allow read, write: if request.auth != null; }
-    match /invoices/{id}   { allow read, write: if request.auth != null; }
-    match /counters/{id}   { allow read, write: if request.auth != null; }
+    match /bookings/{id} { allow read, write: if true; }
+    match /jobCards/{id} { allow read, write: if true; }
+    match /invoices/{id} { allow read, write: if true; }
+    match /counters/{id} { allow read, write: if true; }
   }
 }
