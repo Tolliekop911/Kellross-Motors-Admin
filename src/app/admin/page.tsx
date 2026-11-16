@@ -8,6 +8,7 @@ import {
   createJobCardFromBooking, createBlankJobCard, createBlankInvoice, updateBooking, invoiceTotals,
 } from "@/lib/data";
 import { money } from "@/lib/business";
+import { ExportMenu } from "@/components/ExportMenu";
 import type { Booking, JobCard, Invoice, BookingStatus } from "@/lib/types";
 
 type Tab = "bookings" | "jobcards" | "invoices";
@@ -71,11 +72,14 @@ function Dashboard() {
             {counts.openJobs} open job card{counts.openJobs === 1 ? "" : "s"}
           </p>
         </div>
-        {tab === "invoices" ? (
-          <button className="btn-primary" onClick={newInvoice}>+ New invoice</button>
-        ) : (
-          <button className="btn-primary" onClick={newBlank}>+ New job card</button>
-        )}
+        <div className="flex items-center gap-2">
+          <ExportMenu bookings={bookings} jobCards={jobCards} invoices={invoices} />
+          {tab === "invoices" ? (
+            <button className="btn-primary" onClick={newInvoice}>+ New invoice</button>
+          ) : (
+            <button className="btn-primary" onClick={newBlank}>+ New job card</button>
+          )}
+        </div>
       </div>
 
       <div className="mt-6 flex gap-1 rounded-xl border border-steel-200 bg-white p-1 text-sm">
