@@ -13,7 +13,7 @@ export function Wordmark({ className = "" }: { className?: string }) {
 export function PublicHeader() {
   return (
     <header className="border-b border-steel-200 bg-white/80 backdrop-blur">
-      <div className="mx-auto flex max-w-5xl items-center justify-between px-5 py-4">
+      <div className="mx-auto flex max-w-screen-2xl items-center justify-between px-6 lg:px-10 py-4">
         <Link href="/">
           <Wordmark className="text-xl" />
         </Link>

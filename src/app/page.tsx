@@ -56,7 +56,7 @@ export default function BookingPage() {
       {/* Hero */}
       <section className="relative overflow-hidden border-b border-steel-200 bg-ink text-white">
         <div className="pointer-events-none absolute -right-24 -top-24 h-80 w-80 rounded-full bg-brand/20 blur-3xl" />
-        <div className="mx-auto max-w-5xl px-5 py-14">
+        <div className="mx-auto max-w-screen-2xl px-6 lg:px-10 py-14">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-brand-light">
             Strand · Gants Centre
           </p>
@@ -70,7 +70,7 @@ export default function BookingPage() {
         </div>
       </section>
 
-      <main className="mx-auto max-w-5xl px-5 py-10">
+      <main className="mx-auto max-w-screen-2xl px-6 lg:px-10 py-10">
         {done ? (
           <div className="mx-auto max-w-xl card p-8 text-center">
             <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-brand/10 text-brand">
@@ -142,7 +142,7 @@ export default function BookingPage() {
         )}
       </main>
 
-      <footer className="mx-auto max-w-5xl px-5 pb-10 text-xs text-steel-400">
+      <footer className="mx-auto max-w-screen-2xl px-6 lg:px-10 pb-10 text-xs text-steel-400">
         {BUSINESS.name} · Reg {BUSINESS.reg} · VAT {BUSINESS.vat} · {BUSINESS.address}
       </footer>
     </div>
