@@ -6,10 +6,11 @@ import { useRouter, useSearchParams } from "next/navigation";
 import {
   listBookings, listJobCards, listInvoices,
   createJobCardFromBooking, createBlankJobCard, createBlankInvoice, updateBooking, invoiceTotals,
-  deleteBooking, deleteJobCard, deleteInvoice,
+  deleteBooking, deleteJobCard, deleteInvoice, getMaxPerDay, setMaxPerDay,
 } from "@/lib/data";
 import { money } from "@/lib/business";
 import { ExportMenu } from "@/components/ExportMenu";
+import { ImportBookings } from "@/components/ImportBookings";
 import type { Booking, JobCard, Invoice, BookingStatus } from "@/lib/types";
 
 type Tab = "bookings" | "jobcards" | "invoices";
@@ -79,6 +80,7 @@ function Dashboard() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {tab === "bookings" && <ImportBookings onImported={reload} />}
           <ExportMenu bookings={bookings} jobCards={jobCards} invoices={invoices} />
           {tab === "invoices" ? (
             <button className="btn-primary" onClick={newInvoice}>+ New invoice</button>
@@ -103,6 +105,7 @@ function Dashboard() {
         <p className="mt-10 text-center text-steel-400">Loading…</p>
       ) : (
         <div className="mt-6">
+          {tab === "bookings" && <DailyLimit />}
           {tab === "bookings" && (
             <Table head={["Received", "Customer", "Vehicle", "Service", "Status", ""]}>
               {bookings.length === 0 && <Empty label="No bookings yet." />}
@@ -180,6 +183,27 @@ function Dashboard() {
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+function DailyLimit() {
+  const [value, setValue] = useState<number | null>(null);
+  const [saved, setSaved] = useState(false);
+  useEffect(() => { getMaxPerDay().then(setValue); }, []);
+  if (value == null) return null;
+  return (
+    <div className="mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-steel-200 bg-white px-4 py-3 text-sm">
+      <span className="font-medium text-steel-700">Max vehicles booked per day</span>
+      <input type="number" min={1} value={value}
+        onChange={(e) => { setValue(Math.max(1, parseInt(e.target.value) || 1)); setSaved(false); }}
+        className="field w-20 py-1.5" />
+      <button className="btn-ghost px-3 py-1.5 text-xs"
+        onClick={async () => { await setMaxPerDay(value); setSaved(true); }}>
+        Save
+      </button>
+      {saved && <span className="text-xs text-emerald-600">Saved</span>}
+      <span className="text-xs text-steel-400">The website blocks new bookings once a day is full.</span>
     </div>
   );
 }

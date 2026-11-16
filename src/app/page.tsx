@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { PublicHeader } from "@/components/Brand";
 import { ConfigNotice } from "@/components/ConfigNotice";
 import { firebaseReady } from "@/lib/firebase";
-import { createBooking } from "@/lib/data";
+import { createBooking, getMaxPerDay, countBookingsOnDate } from "@/lib/data";
 import { BUSINESS } from "@/lib/business";
 
 const SERVICES = [
@@ -31,15 +31,35 @@ export default function BookingPage() {
   const [sending, setSending] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState("");
+  const [day, setDay] = useState<{ full: boolean; remaining: number } | null>(null);
 
   const set = (k: keyof typeof empty) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
     setForm((f) => ({ ...f, [k]: e.target.value }));
 
+  // Check how full the chosen day is.
+  useEffect(() => {
+    if (!firebaseReady || !form.preferredDate) { setDay(null); return; }
+    let active = true;
+    setDay(null);
+    Promise.all([getMaxPerDay(), countBookingsOnDate(form.preferredDate)])
+      .then(([max, count]) => { if (active) setDay({ full: count >= max, remaining: Math.max(0, max - count) }); })
+      .catch(() => { if (active) setDay(null); });
+    return () => { active = false; };
+  }, [form.preferredDate]);
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+    if (day?.full) { setError("That day is fully booked — please choose another date."); return; }
     setSending(true);
     try {
+      // Re-check at submit time in case the day filled up meanwhile.
+      const [max, count] = await Promise.all([getMaxPerDay(), countBookingsOnDate(form.preferredDate)]);
+      if (form.preferredDate && count >= max) {
+        setDay({ full: true, remaining: 0 });
+        setError("That day just became fully booked — please choose another date.");
+        return;
+      }
       await createBooking(form);
       setDone(true);
     } catch (err) {
@@ -119,7 +139,17 @@ export default function BookingPage() {
                     {SERVICES.map((s) => <option key={s}>{s}</option>)}
                   </select>
                 </div>
-                <Input label="Preferred date" type="date" value={form.preferredDate} onChange={set("preferredDate")} />
+                <div>
+                  <Input label="Preferred date" type="date" value={form.preferredDate} onChange={set("preferredDate")}
+                    min={new Date().toISOString().slice(0, 10)} />
+                  {day && (
+                    day.full
+                      ? <p className="mt-1 text-xs font-medium text-brand">Fully booked — please choose another day.</p>
+                      : <p className="mt-1 text-xs font-medium text-emerald-600">
+                          {day.remaining} slot{day.remaining === 1 ? "" : "s"} available this day.
+                        </p>
+                  )}
+                </div>
                 <div className="sm:col-span-2">
                   <label className="label">Describe the problem / notes</label>
                   <textarea className="field min-h-[96px]" value={form.notes} onChange={set("notes")}
@@ -134,8 +164,8 @@ export default function BookingPage() {
               <Link href="/admin" className="text-sm font-medium text-steel-400 hover:text-steel-600">
                 Staff login →
               </Link>
-              <button type="submit" className="btn-primary" disabled={sending}>
-                {sending ? "Sending…" : "Request booking"}
+              <button type="submit" className="btn-primary" disabled={sending || day?.full}>
+                {sending ? "Sending…" : day?.full ? "Day fully booked" : "Request booking"}
               </button>
             </div>
           </form>

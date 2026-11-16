@@ -4,6 +4,7 @@
     "bookings": { ".read": true, ".write": true, ".indexOn": ["createdAt"] },
     "jobCards": { ".read": true, ".write": true, ".indexOn": ["createdAt"] },
     "invoices": { ".read": true, ".write": true, ".indexOn": ["createdAt"] },
-    "counters": { ".read": true, ".write": true }
+    "counters": { ".read": true, ".write": true },
+    "settings": { ".read": true, ".write": true }
   }
 }

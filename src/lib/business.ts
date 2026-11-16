@@ -19,6 +19,8 @@ export const BUSINESS = {
   // New documents continue the sequence from the current paper books.
   startingJobCardNo: 24145,
   startingInvoiceNo: 23230,
+  // Default max vehicles booked in per day (staff can change this in the admin).
+  defaultMaxBookingsPerDay: 8,
   terms: [
     "All vehicles and their contents are stored and driven at vehicle owner's own risk. Assuring you all precaution and care taken we are not responsible for any damage due to fire, theft or any other cause. Please remove all valuables from your vehicle.",
     "All quotes are subject to stripping - a 50% deposit is required on quotes over R5000 before any work will be carried out. A storage fee of R120/day will be levied on vehicles not collected 48hrs after completion of work.",

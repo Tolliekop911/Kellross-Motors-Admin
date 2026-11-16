@@ -39,6 +39,49 @@ async function getOne<T>(path: string, id: string): Promise<(T & { id: string })
   return snap.exists() ? ({ id, ...(snap.val() as T) }) : null;
 }
 
+// --- Settings: daily booking limit ---
+export async function getMaxPerDay(): Promise<number> {
+  try {
+    const snap = await get(ref(rtdb(), "settings/maxBookingsPerDay"));
+    const v = snap.val();
+    return typeof v === "number" && v > 0 ? v : BUSINESS.defaultMaxBookingsPerDay;
+  } catch {
+    // settings node not readable yet (rules not published) — fall back to default.
+    return BUSINESS.defaultMaxBookingsPerDay;
+  }
+}
+export async function setMaxPerDay(n: number) {
+  await set(ref(rtdb(), "settings/maxBookingsPerDay"), Math.max(1, Math.round(n)));
+}
+
+/** How many (non-cancelled) vehicles are already booked in on a given date. */
+export async function countBookingsOnDate(date: string): Promise<number> {
+  if (!date) return 0;
+  const all = await listBookings();
+  return all.filter((b) => b.preferredDate === date && b.status !== "cancelled").length;
+}
+
+/** Bulk-import existing (paper) appointments as bookings. Returns how many were added. */
+export interface ImportRow {
+  date?: string; name?: string; phone?: string; email?: string;
+  make?: string; model?: string; registration?: string; service?: string; notes?: string;
+}
+export async function importBookings(rows: ImportRow[]): Promise<number> {
+  let count = 0;
+  for (const r of rows) {
+    if (!r.name && !r.registration && !r.date) continue; // skip empty lines
+    const rref = push(ref(rtdb(), "bookings"));
+    await set(rref, {
+      name: r.name ?? "", email: r.email ?? "", tel: "", cell: r.phone ?? "", address: "",
+      make: r.make ?? "", model: r.model ?? "", registration: r.registration ?? "", km: "",
+      service: r.service || "Service", preferredDate: r.date ?? "", notes: r.notes ?? "",
+      status: "scheduled", createdAt: Date.now(),
+    });
+    count++;
+  }
+  return count;
+}
+
 // --- Bookings ---
 export async function createBooking(data: Omit<Booking, "id" | "createdAt" | "status">) {
   const r = push(ref(rtdb(), "bookings"));
